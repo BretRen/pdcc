@@ -3,6 +3,8 @@ const WebSocket = require("ws");
 const USERS = {
   alice: "123456",
   bob: "abcdef",
+  mark: "666",
+  pidan: "999",
 };
 
 const wss = new WebSocket.Server({ port: 12345 }, () => {

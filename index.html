@@ -2,185 +2,572 @@
 <html lang="zh">
 
 <head>
-    <meta charset="UTF-8">
-    <title>频道聊天室</title>
+    <meta charset="UTF-8" />
+    <title>Discord风格频道聊天室</title>
     <style>
-        body {
-            font-family: "Segoe UI", sans-serif;
-            background: #f2f4f8;
-            max-width: 600px;
-            margin: 40px auto;
-            padding: 20px;
-            border-radius: 12px;
-            background-color: #ffffff;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-        }
-
-        h2 {
-            margin-top: 30px;
-            color: #333;
-            border-left: 5px solid #0078d7;
-            padding-left: 10px;
-        }
-
-        input {
-            padding: 8px;
-            margin: 5px 0 15px;
-            width: 100%;
-            border: 1px solid #ccc;
-            border-radius: 6px;
+        /* Reset & Base */
+        * {
             box-sizing: border-box;
-            font-size: 14px;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #36393f;
+            color: #dcddde;
+            user-select: none;
         }
 
         button {
-            padding: 10px 16px;
-            font-size: 14px;
-            background-color: #0078d7;
-            color: white;
-            border: none;
-            border-radius: 6px;
             cursor: pointer;
-            margin-bottom: 10px;
+            border: none;
+            background: #7289da;
+            color: white;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-weight: 600;
+            transition: background 0.2s ease;
         }
 
         button:hover {
-            background-color: #005fa1;
+            background: #5b6eae;
         }
 
-        ul {
-            list-style: none;
-            padding-left: 0;
-            max-height: 300px;
-            overflow-y: auto;
-            border-top: 1px solid #eee;
-            margin-top: 20px;
-        }
-
-        li {
-            background-color: #f7f9fc;
-            margin: 8px 0;
-            padding: 10px 12px;
-            border-radius: 6px;
-            border-left: 4px solid #0078d7;
+        input {
+            background: #202225;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            color: #dcddde;
             font-size: 14px;
+            outline: none;
+            width: 100%;
         }
 
-        #msg {
-            width: 80%;
-            display: inline-block;
+        input::placeholder {
+            color: #72767d;
         }
 
-        #sendBtn {
-            width: 18%;
-            display: inline-block;
+        h2 {
+            font-weight: 700;
+            font-size: 18px;
+            margin: 0 0 12px 0;
+            padding-left: 12px;
+            border-left: 4px solid #7289da;
+            user-select: text;
         }
 
-        .hidden {
-            display: none;
+        /* 布局 */
+        #app {
+            display: flex;
+            height: 100vh;
+            max-width: 960px;
+            margin: 0 auto;
+            background-color: #2f3136;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 侧边栏 - 频道列表 */
+        #sidebar {
+            width: 220px;
+            background-color: #202225;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 15px;
+        }
+
+        #sidebar h2 {
+            color: #b9bbbe;
+            border-left: none;
+            padding-left: 0;
+            margin-bottom: 16px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        #channelList {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        #channelList button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            color: #b9bbbe;
+            font-size: 14px;
+            margin-bottom: 6px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            transition: background 0.15s ease;
+        }
+
+        #channelList button:hover,
+        #channelList button.active {
+            background-color: #5865f2;
+            color: white;
+        }
+
+        #joinChannelInput {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+        }
+
+        #joinChannelInput input {
+            flex-grow: 1;
+        }
+
+        /* 主要内容区 */
+        #main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #36393f;
+            padding: 20px;
+        }
+
+        #chatHeader {
+            border-bottom: 1px solid #2f3136;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: 700;
+            font-size: 20px;
+            color: #fff;
+            user-select: text;
+        }
+
+        #chatMessages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            margin-bottom: 14px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .message .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #7289da;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            text-align: center;
+            line-height: 40px;
+            user-select: none;
+        }
+
+        .message-content {
+            max-width: 80%;
+        }
+
+        .message-username {
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+            user-select: text;
+        }
+
+        .message-text {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #dcddde;
+        }
+
+        #chatInputContainer {
+            margin-top: 12px;
+            display: flex;
+            gap: 10px;
+        }
+
+        #chatInput {
+            flex-grow: 1;
+            padding: 10px 14px;
+            font-size: 14px;
+            border-radius: 6px;
+            border: none;
+            background-color: #40444b;
+            color: #dcddde;
+            outline: none;
+        }
+
+        #sendButton {
+            padding: 0 20px;
+            background-color: #5865f2;
+            border-radius: 6px;
+            font-weight: 700;
+            transition: background-color 0.2s ease;
+        }
+
+        #sendButton:hover {
+            background-color: #4752c4;
+        }
+
+        /* 登录遮罩 */
+        #loginModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #loginBox {
+            background: #2f3136;
+            padding: 30px 40px;
+            border-radius: 10px;
+            width: 320px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            color: #ddd;
+        }
+
+        #loginBox h2 {
+            margin-top: 0;
+            color: #fff;
+            text-align: center;
+        }
+
+        #loginBox input {
+            margin-bottom: 15px;
         }
     </style>
 </head>
 
 <body>
-    <!-- 登录界面 -->
-    <div id="loginArea">
-        <h2>登录</h2>
-        <input id="username" placeholder="用户名">
-        <input id="password" type="password" placeholder="密码">
-        <button onclick="login()">登录</button>
+    <div id="loginModal">
+        <div id="loginBox">
+            <h2>登录频道聊天室</h2>
+            <input id="loginUsername" placeholder="用户名" autocomplete="off" />
+            <input id="loginPassword" type="password" placeholder="密码" autocomplete="off" />
+            <button id="loginBtn">登录</button>
+            <p id="loginStatus" style="color:#f04747; height: 18px; margin-top: 8px; text-align: center;"></p>
+        </div>
     </div>
 
-    <!-- 频道设置 -->
-    <div id="channelArea" class="hidden">
-        <h2>加入频道</h2>
-        <input id="channel" placeholder="频道名">
-        <button onclick="join()">加入</button>
-    </div>
-
-    <!-- 显示/隐藏频道设置按钮 -->
-    <button id="showChannelBtn" class="hidden" onclick="toggleChannel()">频道设置</button>
-
-    <!-- 日志输出（始终可见） -->
-    <ul id="log"></ul>
-
-    <!-- 聊天区域 -->
-    <div id="chatArea" class="hidden">
-        <h2>聊天</h2>
-        <input id="msg" placeholder="请输入消息">
-        <button id="sendBtn" onclick="send()">发送</button>
+    <div id="app" style="display:none;">
+        <div id="sidebar">
+            <h2>频道列表</h2>
+            <div id="channelList"></div>
+            <div id="joinChannelInput">
+                <input id="channelInput" placeholder="输入频道名" autocomplete="off" />
+                <button id="joinChannelBtn">加入</button>
+            </div>
+        </div>
+        <div id="main">
+            <div id="chatHeader">请选择频道</div>
+            <div id="chatMessages"></div>
+            <div id="chatInputContainer" style="display:none;">
+                <input id="chatInput" placeholder="输入消息..." autocomplete="off" />
+                <button id="sendButton">发送</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        const log = (msg) => {
-            console.log(msg);
-            const li = document.createElement('li');
-            li.textContent = msg;
-            const logList = document.getElementById('log');
-            logList.appendChild(li);
-            logList.scrollTop = logList.scrollHeight;
-        };
+        const loginModal = document.getElementById('loginModal');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginUsername = document.getElementById('loginUsername');
+        const loginPassword = document.getElementById('loginPassword');
+        const loginStatus = document.getElementById('loginStatus');
 
-        const socket = new WebSocket("ws://localhost:12345");
+        const app = document.getElementById('app');
+        const channelList = document.getElementById('channelList');
+        const channelInput = document.getElementById('channelInput');
+        const joinChannelBtn = document.getElementById('joinChannelBtn');
 
-        socket.onopen = () => log("[系统] 已连接服务器");
-        socket.onerror = () => log("[系统] 无法连接服务器");
+        const chatHeader = document.getElementById('chatHeader');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInputContainer = document.getElementById('chatInputContainer');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
 
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            console.log("收到消息", data);
+        let socket;
+        let username;
+        let currentChannel = null;
 
-            if (data.type === "message") {
-                log(`[${data.channel}] ${data.from}: ${data.content}`);
-            } else if (data.type === "login") {
-                if (data.success) {
-                    log("✅ 登录成功！");
-                    showChannelInput();
-                } else {
-                    log("❌ 登录失败：" + (data.error || "用户名或密码错误"));
+        // 获取频道列表 key
+        function getChannelsKey() {
+            return `channels_${username}`;
+        }
+
+        // 获取聊天记录 key
+        function getChatKey(channel) {
+            return `chat_${username}_${channel}`;
+        }
+
+        // 从 localStorage 读取频道列表，格式是数组
+        function loadStoredChannels() {
+            const raw = localStorage.getItem(getChannelsKey());
+            if (raw) {
+                try {
+                    return JSON.parse(raw);
+                } catch {
+                    return [];
                 }
-            } else if (data.type === "joined") {
-                log(`✅ 已加入频道：${data.channel}`);
-                showChatArea();
-            } else {
-                log("[系统] " + (data.message || JSON.stringify(data)));
             }
-        };
-
-        function login() {
-            const username = document.getElementById("username").value;
-            const password = document.getElementById("password").value;
-            socket.send(JSON.stringify({ type: "login", username, password }));
+            return [];
         }
 
-        function join() {
-            const channel = document.getElementById("channel").value;
-            socket.send(JSON.stringify({ type: "join", channel }));
+        // 保存频道列表到 localStorage
+        function saveChannels(channels) {
+            localStorage.setItem(getChannelsKey(), JSON.stringify(channels));
         }
 
-        function send() {
-            const content = document.getElementById("msg").value;
-            if (content.trim()) {
-                socket.send(JSON.stringify({ type: "message", content }));
-                document.getElementById("msg").value = "";
+        // 加载某频道聊天记录（数组，每项是 {user,text}）
+        function loadChatHistory(channel) {
+            const raw = localStorage.getItem(getChatKey(channel));
+            if (raw) {
+                try {
+                    return JSON.parse(raw);
+                } catch {
+                    return [];
+                }
+            }
+            return [];
+        }
+
+        // 保存某频道聊天记录（数组）
+        function saveChatHistory(channel, messages) {
+            localStorage.setItem(getChatKey(channel), JSON.stringify(messages));
+        }
+
+        // 渲染频道列表
+        function updateChannelList() {
+            const channels = loadStoredChannels();
+            channelList.innerHTML = '';
+
+            channels.forEach(ch => {
+                const btn = document.createElement('button');
+                btn.textContent = `# ${ch}`;
+
+                // 当前频道高亮
+                if (ch === currentChannel) btn.classList.add('active');
+
+                // 删除按钮
+                const delBtn = document.createElement('span');
+                delBtn.textContent = '×';
+                delBtn.style.float = 'right';
+                delBtn.style.cursor = 'pointer';
+                delBtn.style.color = '#f04747';
+                delBtn.style.fontWeight = 'bold';
+                delBtn.style.marginLeft = '10px';
+                delBtn.title = '删除频道';
+
+                delBtn.onclick = (e) => {
+                    e.stopPropagation(); // 阻止点击事件冒泡导致切换频道
+                    deleteChannel(ch);
+                };
+
+                btn.appendChild(delBtn);
+
+                btn.onclick = () => {
+                    if (currentChannel === ch) return; // 已在该频道，忽略
+                    if (socket && socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({ type: 'join', channel: ch }));
+                    }
+                };
+
+                channelList.appendChild(btn);
+            });
+        }
+
+        // 删除频道
+        function deleteChannel(channel) {
+            let channels = loadStoredChannels();
+            channels = channels.filter(c => c !== channel);
+            saveChannels(channels);
+
+            // 删除聊天记录
+            localStorage.removeItem(getChatKey(channel));
+
+            // 如果当前频道被删了，清空聊天区
+            if (currentChannel === channel) {
+                currentChannel = null;
+                chatHeader.textContent = '请选择频道';
+                chatMessages.innerHTML = '';
+                chatInputContainer.style.display = 'none';
+            }
+
+            updateChannelList();
+        }
+
+        // 加入已存在频道（本地频道，不用服务器 join ）
+        function joinExistingChannel(channel) {
+            currentChannel = channel;
+            chatHeader.textContent = `频道: #${channel}`;
+            chatMessages.innerHTML = '';
+
+            // 加载聊天记录显示
+            const messages = loadChatHistory(channel);
+            messages.forEach(msg => {
+                addMessage(msg.user, msg.text);
+            });
+
+            chatInputContainer.style.display = 'flex';
+            updateChannelList();
+        }
+
+        // 添加消息到聊天区，并保存
+        function addMessage(user, text) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message');
+
+            const avatar = document.createElement('div');
+            avatar.classList.add('avatar');
+            avatar.textContent = user[0].toUpperCase();
+
+            const contentDiv = document.createElement('div');
+            contentDiv.classList.add('message-content');
+
+            const userSpan = document.createElement('div');
+            userSpan.classList.add('message-username');
+            userSpan.textContent = user;
+
+            const textSpan = document.createElement('div');
+            textSpan.classList.add('message-text');
+            textSpan.textContent = text;
+
+            contentDiv.appendChild(userSpan);
+            contentDiv.appendChild(textSpan);
+
+            msgDiv.appendChild(avatar);
+            msgDiv.appendChild(contentDiv);
+
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // 保存消息到 localStorage
+            if (currentChannel) {
+                let messages = loadChatHistory(currentChannel);
+                messages.push({ user, text });
+                saveChatHistory(currentChannel, messages);
             }
         }
 
-        function showChannelInput() {
-            document.getElementById("loginArea").classList.add("hidden");
-            document.getElementById("channelArea").classList.remove("hidden");
+        // WebSocket 连接及消息处理
+        function connectWebSocket() {
+            socket = new WebSocket("ws://localhost:12345");
+
+            socket.onopen = () => {
+                addMessage('系统', '已连接服务器');
+                socket.send(JSON.stringify({ type: 'login', username, password: loginPassword.value }));
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log("收到消息", data);
+
+                if (data.type === 'login') {
+                    if (data.success) {
+                        loginStatus.style.color = '#43b581';
+                        loginStatus.textContent = '登录成功！';
+                        setTimeout(() => {
+                            loginModal.style.display = 'none';
+                            app.style.display = 'flex';
+                            // 自动加入已保存频道列表第一个频道（如果有）
+                            const channels = loadStoredChannels();
+                            if (channels.length > 0) {
+                                joinExistingChannel(channels[0]);
+                            }
+                            updateChannelList();
+                        }, 800);
+                    } else {
+                        loginStatus.style.color = '#f04747';
+                        loginStatus.textContent = data.error || '登录失败';
+                    }
+                } else if (data.type === 'joined') {
+                    // 服务器加入频道成功后，保存频道到本地列表（去重）
+                    const channel = data.channel;
+                    let channels = loadStoredChannels();
+                    if (!channels.includes(channel)) {
+                        channels.push(channel);
+                        saveChannels(channels);
+                    }
+                    currentChannel = channel;
+                    chatHeader.textContent = `频道: #${channel}`;
+                    chatMessages.innerHTML = '';
+                    chatInputContainer.style.display = 'flex';
+                    addMessage('系统', `加入频道 #${channel}`);
+                    updateChannelList();
+                } else if (data.type === 'message') {
+                    if (data.channel === currentChannel) {
+                        addMessage(data.from, data.content);
+                    }
+                } else if (data.type === 'info') {
+                    addMessage('系统', data.message);
+                } else if (data.type === 'error') {
+                    addMessage('错误', data.message);
+                }
+            };
+
+            socket.onerror = () => {
+                addMessage('系统', '连接错误，请刷新页面重试');
+            };
+
+            socket.onclose = () => {
+                addMessage('系统', '连接已关闭');
+            };
         }
 
-        function showChatArea() {
-            document.getElementById("channelArea").classList.add("hidden");
-            document.getElementById("chatArea").classList.remove("hidden");
-            document.getElementById("showChannelBtn").classList.remove("hidden");
-        }
+        // 登录按钮事件
+        loginBtn.addEventListener('click', () => {
+            username = loginUsername.value.trim();
+            if (!username) {
+                loginStatus.textContent = '请输入用户名';
+                return;
+            }
+            if (!loginPassword.value) {
+                loginStatus.textContent = '请输入密码';
+                return;
+            }
+            loginStatus.textContent = '';
+            connectWebSocket();
+        });
 
-        function toggleChannel() {
-            const channelDiv = document.getElementById("channelArea");
-            channelDiv.classList.toggle("hidden");
-        }
+        // 加入新频道按钮事件
+        joinChannelBtn.addEventListener('click', () => {
+            const channel = channelInput.value.trim();
+            if (!channel) return;
+            // 通过服务器 join 频道
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'join', channel }));
+            }
+            channelInput.value = '';
+        });
+
+        // 发送消息按钮事件
+        sendButton.addEventListener('click', () => {
+            const msg = chatInput.value.trim();
+            if (!msg) return;
+            socket.send(JSON.stringify({ type: 'message', content: msg }));
+            chatInput.value = '';
+        });
+
+        // 回车发送消息支持
+        chatInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendButton.click();
+            }
+        });
+
     </script>
 </body>
 
