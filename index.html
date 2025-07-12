@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <title>频道聊天室</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: #f2f4f8;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            border-radius: 12px;
+            background-color: #ffffff;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-top: 30px;
+            color: #333;
+            border-left: 5px solid #0078d7;
+            padding-left: 10px;
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px 0 15px;
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 10px 16px;
+            font-size: 14px;
+            background-color: #0078d7;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: #005fa1;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            border-top: 1px solid #eee;
+            margin-top: 20px;
+        }
+
+        li {
+            background-color: #f7f9fc;
+            margin: 8px 0;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border-left: 4px solid #0078d7;
+            font-size: 14px;
+        }
+
+        #msg {
+            width: 80%;
+            display: inline-block;
+        }
+
+        #sendBtn {
+            width: 18%;
+            display: inline-block;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 登录界面 -->
+    <div id="loginArea">
+        <h2>登录</h2>
+        <input id="username" placeholder="用户名">
+        <input id="password" type="password" placeholder="密码">
+        <button onclick="login()">登录</button>
+    </div>
+
+    <!-- 频道设置 -->
+    <div id="channelArea" class="hidden">
+        <h2>加入频道</h2>
+        <input id="channel" placeholder="频道名">
+        <button onclick="join()">加入</button>
+    </div>
+
+    <!-- 显示/隐藏频道设置按钮 -->
+    <button id="showChannelBtn" class="hidden" onclick="toggleChannel()">频道设置</button>
+
+    <!-- 日志输出（始终可见） -->
+    <ul id="log"></ul>
+
+    <!-- 聊天区域 -->
+    <div id="chatArea" class="hidden">
+        <h2>聊天</h2>
+        <input id="msg" placeholder="请输入消息">
+        <button id="sendBtn" onclick="send()">发送</button>
+    </div>
+
+    <script>
+        const log = (msg) => {
+            console.log(msg);
+            const li = document.createElement('li');
+            li.textContent = msg;
+            const logList = document.getElementById('log');
+            logList.appendChild(li);
+            logList.scrollTop = logList.scrollHeight;
+        };
+
+        const socket = new WebSocket("ws://localhost:12345");
+
+        socket.onopen = () => log("[系统] 已连接服务器");
+        socket.onerror = () => log("[系统] 无法连接服务器");
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            console.log("收到消息", data);
+
+            if (data.type === "message") {
+                log(`[${data.channel}] ${data.from}: ${data.content}`);
+            } else if (data.type === "login") {
+                if (data.success) {
+                    log("✅ 登录成功！");
+                    showChannelInput();
+                } else {
+                    log("❌ 登录失败：" + (data.error || "用户名或密码错误"));
+                }
+            } else if (data.type === "joined") {
+                log(`✅ 已加入频道：${data.channel}`);
+                showChatArea();
+            } else {
+                log("[系统] " + (data.message || JSON.stringify(data)));
+            }
+        };
+
+        function login() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            socket.send(JSON.stringify({ type: "login", username, password }));
+        }
+
+        function join() {
+            const channel = document.getElementById("channel").value;
+            socket.send(JSON.stringify({ type: "join", channel }));
+        }
+
+        function send() {
+            const content = document.getElementById("msg").value;
+            if (content.trim()) {
+                socket.send(JSON.stringify({ type: "message", content }));
+                document.getElementById("msg").value = "";
+            }
+        }
+
+        function showChannelInput() {
+            document.getElementById("loginArea").classList.add("hidden");
+            document.getElementById("channelArea").classList.remove("hidden");
+        }
+
+        function showChatArea() {
+            document.getElementById("channelArea").classList.add("hidden");
+            document.getElementById("chatArea").classList.remove("hidden");
+            document.getElementById("showChannelBtn").classList.remove("hidden");
+        }
+
+        function toggleChannel() {
+            const channelDiv = document.getElementById("channelArea");
+            channelDiv.classList.toggle("hidden");
+        }
+    </script>
+</body>
+
+</html>
