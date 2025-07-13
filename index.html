@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8" />
-    <title>Discord风格频道聊天室</title>
+    <title>好友聊天系统</title>
     <style>
         /* Reset & Base */
         * {
@@ -72,9 +72,9 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         }
 
-        /* 侧边栏 - 频道列表 */
+        /* 侧边栏 - 好友列表 */
         #sidebar {
-            width: 220px;
+            width: 260px;
             background-color: #202225;
             display: flex;
             flex-direction: column;
@@ -85,43 +85,129 @@
             color: #b9bbbe;
             border-left: none;
             padding-left: 0;
-            margin-bottom: 16px;
+            margin-bottom: 8px;
             font-weight: 600;
             font-size: 16px;
+            user-select: text;
         }
 
-        #channelList {
+        #friendSearchContainer {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        #friendSearchInput {
+            flex-grow: 1;
+        }
+
+        #friendList {
             flex-grow: 1;
             overflow-y: auto;
+            user-select: none;
         }
 
-        #channelList button {
-            display: block;
-            width: 100%;
-            text-align: left;
-            background: transparent;
+        .friend-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2f3136;
+            margin-bottom: 6px;
+            padding: 8px 12px;
+            border-radius: 6px;
             color: #b9bbbe;
             font-size: 14px;
-            margin-bottom: 6px;
-            padding: 6px 10px;
-            border-radius: 4px;
+            cursor: pointer;
             transition: background 0.15s ease;
+            user-select: none;
         }
 
-        #channelList button:hover,
-        #channelList button.active {
+        .friend-item:hover {
             background-color: #5865f2;
             color: white;
         }
 
-        #joinChannelInput {
-            margin-top: 10px;
-            display: flex;
-            gap: 8px;
+        .friend-item.active {
+            background-color: #5865f2;
+            color: white;
+            font-weight: 700;
         }
 
-        #joinChannelInput input {
+        .friend-name {
             flex-grow: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .friend-actions {
+            display: flex;
+            gap: 6px;
+            margin-left: 8px;
+        }
+
+        .friend-actions button {
+            background: transparent;
+            color: #f04747;
+            padding: 0 6px;
+            font-weight: 700;
+            font-size: 14px;
+            border-radius: 4px;
+            user-select: none;
+            transition: color 0.15s ease;
+        }
+
+        .friend-actions button:hover {
+            color: #ff6b6b;
+        }
+
+        /* 黑名单展示 */
+        #blacklistContainer {
+            margin-top: 12px;
+            border-top: 1px solid #424549;
+            padding-top: 12px;
+        }
+
+        #blacklistContainer h3 {
+            font-weight: 600;
+            font-size: 15px;
+            color: #f04747;
+            margin-bottom: 8px;
+            user-select: text;
+        }
+
+        .blacklist-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2f3136;
+            margin-bottom: 6px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: #f04747;
+            font-size: 14px;
+            user-select: none;
+        }
+
+        .blacklist-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .blacklist-actions button {
+            background: transparent;
+            color: #43b581;
+            padding: 0 6px;
+            font-weight: 700;
+            font-size: 14px;
+            border-radius: 4px;
+            user-select: none;
+            transition: color 0.15s ease;
+        }
+
+        .blacklist-actions button:hover {
+            color: #6ee3b4;
         }
 
         /* 主要内容区 */
@@ -148,6 +234,7 @@
             overflow-y: auto;
             padding-right: 10px;
             scroll-behavior: smooth;
+            user-select: text;
         }
 
         .message {
@@ -167,10 +254,12 @@
             text-align: center;
             line-height: 40px;
             user-select: none;
+            flex-shrink: 0;
         }
 
         .message-content {
             max-width: 80%;
+            word-wrap: break-word;
         }
 
         .message-username {
@@ -186,6 +275,47 @@
             color: #dcddde;
         }
 
+        /* 系统消息 */
+        .system-message {
+            text-align: center;
+            margin: 16px 0;
+            color: #888;
+            font-size: 14px;
+            font-weight: 500;
+            user-select: none;
+        }
+
+        .system-divider {
+            border-top: 1px solid #555;
+            margin: 4px 0;
+        }
+
+        .system-text {
+            margin: 4px 0;
+            color: #aaa;
+        }
+
+        /* 请求通知 */
+        .request-notification {
+            background: #2f3136;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 3px solid #7289da;
+        }
+
+        .request-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .request-actions button {
+            flex: 1;
+            padding: 5px;
+        }
+
+        /* 输入区域 */
         #chatInputContainer {
             margin-top: 12px;
             display: flex;
@@ -201,6 +331,7 @@
             background-color: #40444b;
             color: #dcddde;
             outline: none;
+            user-select: text;
         }
 
         #sendButton {
@@ -209,6 +340,7 @@
             border-radius: 6px;
             font-weight: 700;
             transition: background-color 0.2s ease;
+            user-select: none;
         }
 
         #sendButton:hover {
@@ -227,6 +359,7 @@
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            user-select: none;
         }
 
         #loginBox {
@@ -242,55 +375,93 @@
             margin-top: 0;
             color: #fff;
             text-align: center;
+            user-select: text;
         }
 
         #loginBox input {
             margin-bottom: 15px;
+            user-select: text;
+        }
+
+        #serverSelect {
+            user-select: text;
         }
     </style>
 </head>
 
 <body>
+    <!-- 登录遮罩 -->
     <div id="loginModal">
         <div id="loginBox">
-            <h2>登录频道聊天室</h2>
+            <h2 id="modalTitle">登录好友聊天系统</h2>
+
+            <select id="serverSelect" style="width: 100%; margin-bottom: 10px; padding: 8px; border-radius: 4px;">
+                <option value="local">本地服务器</option>
+                <option value="main">主服务器</option>
+                <option value="custom">自定义服务器</option>
+            </select>
+            <input id="customServerInput" placeholder="ws://地址:端口" style="display:none; margin-bottom: 10px;" />
+
             <input id="loginUsername" placeholder="用户名" autocomplete="off" />
             <input id="loginPassword" type="password" placeholder="密码" autocomplete="off" />
-            <button id="loginBtn">登录</button>
+
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button id="loginBtn" style="flex-grow:1;">登录</button>
+                <button id="registerBtn" style="flex-grow:1;">注册</button>
+            </div>
+
             <p id="loginStatus" style="color:#f04747; height: 18px; margin-top: 8px; text-align: center;"></p>
         </div>
     </div>
 
+    <!-- 主界面 -->
     <div id="app" style="display:none;">
         <div id="sidebar">
-            <h2>频道列表</h2>
-            <div id="channelList"></div>
-            <div id="joinChannelInput">
-                <input id="channelInput" placeholder="输入频道名" autocomplete="off" />
-                <button id="joinChannelBtn">加入</button>
+            <h2>好友列表</h2>
+            <div id="friendSearchContainer">
+                <input id="friendSearchInput" placeholder="输入用户名或UID添加好友…" />
+                <button id="addFriendBtn" title="添加好友">添加</button>
+            </div>
+            <div id="friendList"></div>
+
+            <div id="blacklistContainer" style="display:none;">
+                <h3>黑名单</h3>
+                <div id="blacklist"></div>
             </div>
         </div>
+
         <div id="main">
-            <div id="chatHeader">请选择频道</div>
+            <div id="chatHeader">请选择好友聊天</div>
             <div id="chatMessages"></div>
             <div id="chatInputContainer" style="display:none;">
-                <input id="chatInput" placeholder="输入消息..." autocomplete="off" />
+                <input id="chatInput" placeholder="输入消息…" />
                 <button id="sendButton">发送</button>
             </div>
         </div>
     </div>
 
     <script>
+        // 常量
+        const CLIENT_VERSION = "2.0.0";
+
+        // UI 元素
         const loginModal = document.getElementById('loginModal');
         const loginBtn = document.getElementById('loginBtn');
+        const registerBtn = document.getElementById('registerBtn');
         const loginUsername = document.getElementById('loginUsername');
         const loginPassword = document.getElementById('loginPassword');
         const loginStatus = document.getElementById('loginStatus');
 
+        const serverSelect = document.getElementById('serverSelect');
+        const customServerInput = document.getElementById('customServerInput');
+
         const app = document.getElementById('app');
-        const channelList = document.getElementById('channelList');
-        const channelInput = document.getElementById('channelInput');
-        const joinChannelBtn = document.getElementById('joinChannelBtn');
+        const friendListEl = document.getElementById('friendList');
+        const friendSearchInput = document.getElementById('friendSearchInput');
+        const addFriendBtn = document.getElementById('addFriendBtn');
+
+        const blacklistContainer = document.getElementById('blacklistContainer');
+        const blacklistEl = document.getElementById('blacklist');
 
         const chatHeader = document.getElementById('chatHeader');
         const chatMessages = document.getElementById('chatMessages');
@@ -298,136 +469,96 @@
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
 
-        let socket;
-        let username;
-        let currentChannel = null;
+        // WebSocket 连接和用户信息
+        let socket = null;
+        let currentUser = null; // { id, username }
+        let currentChatFriend = null; // { id, username }
+        let friends = []; // [id]
+        let blacklist = []; // [id]
+        let pendingRequests = []; // [id]
+        let uidToUsernameMap = new Map();
 
-        // 获取频道列表 key
-        function getChannelsKey() {
-            return `channels_${username}`;
+        // 显示或隐藏自定义服务器输入框
+        serverSelect.addEventListener('change', () => {
+            customServerInput.style.display = serverSelect.value === 'custom' ? 'block' : 'none';
+        });
+
+        // 添加系统消息
+        function addSystemMessage(text) {
+            const systemDiv = document.createElement('div');
+            systemDiv.classList.add('system-message');
+
+            const line1 = document.createElement('div');
+            line1.classList.add('system-divider');
+
+            const messageLine = document.createElement('div');
+            messageLine.classList.add('system-text');
+            messageLine.textContent = text;
+
+            const line2 = document.createElement('div');
+            line2.classList.add('system-divider');
+
+            systemDiv.appendChild(line1);
+            systemDiv.appendChild(messageLine);
+            systemDiv.appendChild(line2);
+
+            chatMessages.appendChild(systemDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // 获取聊天记录 key
-        function getChatKey(channel) {
-            return `chat_${username}_${channel}`;
+        // 添加好友请求通知
+        function addFriendRequestNotification(fromId, fromName) {
+            const notificationDiv = document.createElement('div');
+            notificationDiv.classList.add('request-notification');
+
+            const textDiv = document.createElement('div');
+            textDiv.textContent = `${fromName} 想添加你为好友`;
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.classList.add('request-actions');
+
+            const acceptBtn = document.createElement('button');
+            acceptBtn.textContent = '同意';
+            acceptBtn.onclick = () => {
+                socket.send(JSON.stringify({
+                    type: 'respond_friend_request',
+                    fromId: fromId,
+                    accept: true
+                }));
+                notificationDiv.remove();
+            };
+
+            const rejectBtn = document.createElement('button');
+            rejectBtn.textContent = '拒绝';
+            rejectBtn.onclick = () => {
+                socket.send(JSON.stringify({
+                    type: 'respond_friend_request',
+                    fromId: fromId,
+                    accept: false
+                }));
+                notificationDiv.remove();
+            };
+
+            actionsDiv.appendChild(acceptBtn);
+            actionsDiv.appendChild(rejectBtn);
+
+            notificationDiv.appendChild(textDiv);
+            notificationDiv.appendChild(actionsDiv);
+
+            chatMessages.appendChild(notificationDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // 从 localStorage 读取频道列表，格式是数组
-        function loadStoredChannels() {
-            const raw = localStorage.getItem(getChannelsKey());
-            if (raw) {
-                try {
-                    return JSON.parse(raw);
-                } catch {
-                    return [];
-                }
-            }
-            return [];
-        }
+        // 添加普通消息
+        function addChatMessage(user, text, isSelf = false) {
+            if (!user || !text) return;
 
-        // 保存频道列表到 localStorage
-        function saveChannels(channels) {
-            localStorage.setItem(getChannelsKey(), JSON.stringify(channels));
-        }
-
-        // 加载某频道聊天记录（数组，每项是 {user,text}）
-        function loadChatHistory(channel) {
-            const raw = localStorage.getItem(getChatKey(channel));
-            if (raw) {
-                try {
-                    return JSON.parse(raw);
-                } catch {
-                    return [];
-                }
-            }
-            return [];
-        }
-
-        // 保存某频道聊天记录（数组）
-        function saveChatHistory(channel, messages) {
-            localStorage.setItem(getChatKey(channel), JSON.stringify(messages));
-        }
-
-        // 渲染频道列表
-        function updateChannelList() {
-            const channels = loadStoredChannels();
-            channelList.innerHTML = '';
-
-            channels.forEach(ch => {
-                const btn = document.createElement('button');
-                btn.textContent = `# ${ch}`;
-
-                // 当前频道高亮
-                if (ch === currentChannel) btn.classList.add('active');
-
-                // 删除按钮
-                const delBtn = document.createElement('span');
-                delBtn.textContent = '×';
-                delBtn.style.float = 'right';
-                delBtn.style.cursor = 'pointer';
-                delBtn.style.color = '#f04747';
-                delBtn.style.fontWeight = 'bold';
-                delBtn.style.marginLeft = '10px';
-                delBtn.title = '删除频道';
-
-                delBtn.onclick = (e) => {
-                    e.stopPropagation(); // 阻止点击事件冒泡导致切换频道
-                    deleteChannel(ch);
-                };
-
-                btn.appendChild(delBtn);
-
-                btn.onclick = () => {
-                    if (currentChannel === ch) return; // 已在该频道，忽略
-                    if (socket && socket.readyState === WebSocket.OPEN) {
-                        socket.send(JSON.stringify({ type: 'join', channel: ch }));
-                    }
-                };
-
-                channelList.appendChild(btn);
-            });
-        }
-
-        // 删除频道
-        function deleteChannel(channel) {
-            let channels = loadStoredChannels();
-            channels = channels.filter(c => c !== channel);
-            saveChannels(channels);
-
-            // 删除聊天记录
-            localStorage.removeItem(getChatKey(channel));
-
-            // 如果当前频道被删了，清空聊天区
-            if (currentChannel === channel) {
-                currentChannel = null;
-                chatHeader.textContent = '请选择频道';
-                chatMessages.innerHTML = '';
-                chatInputContainer.style.display = 'none';
-            }
-
-            updateChannelList();
-        }
-
-        // 加入已存在频道（本地频道，不用服务器 join ）
-        function joinExistingChannel(channel) {
-            currentChannel = channel;
-            chatHeader.textContent = `频道: #${channel}`;
-            chatMessages.innerHTML = '';
-
-            // 加载聊天记录显示
-            const messages = loadChatHistory(channel);
-            messages.forEach(msg => {
-                addMessage(msg.user, msg.text);
-            });
-
-            chatInputContainer.style.display = 'flex';
-            updateChannelList();
-        }
-
-        // 添加消息到聊天区，并保存
-        function addMessage(user, text) {
             const msgDiv = document.createElement('div');
             msgDiv.classList.add('message');
+            if (isSelf) {
+                msgDiv.style.justifyContent = 'flex-end';
+                msgDiv.style.flexDirection = 'row-reverse';
+            }
 
             const avatar = document.createElement('div');
             avatar.classList.add('avatar');
@@ -446,128 +577,440 @@
 
             contentDiv.appendChild(userSpan);
             contentDiv.appendChild(textSpan);
-
             msgDiv.appendChild(avatar);
             msgDiv.appendChild(contentDiv);
 
             chatMessages.appendChild(msgDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            // 保存消息到 localStorage
-            if (currentChannel) {
-                let messages = loadChatHistory(currentChannel);
-                messages.push({ user, text });
-                saveChatHistory(currentChannel, messages);
-            }
         }
 
-        // WebSocket 连接及消息处理
-        function connectWebSocket() {
-            socket = new WebSocket("ws://98.142.241.143:12345");
+        // 重置登录界面
+        function resetToLogin(reason) {
+            currentUser = null;
+            currentChatFriend = null;
+            socket = null;
+            friends = [];
+            blacklist = [];
+            pendingRequests = [];
+            uidToUsernameMap.clear();
+
+            chatMessages.innerHTML = '';
+            chatInputContainer.style.display = 'none';
+            chatHeader.textContent = '请选择好友聊天';
+            friendListEl.innerHTML = '';
+            blacklistEl.innerHTML = '';
+            blacklistContainer.style.display = 'none';
+
+            loginModal.style.display = 'flex';
+            app.style.display = 'none';
+
+            loginStatus.style.color = '#f04747';
+            loginStatus.textContent = reason || '与服务端断开连接，请重新登录';
+        }
+
+        // 连接WebSocket
+        function connectWebSocket(onOpenCallback) {
+            let wsAddress;
+            if (serverSelect.value === 'main') {
+                wsAddress = "ws://98.142.241.143:12345";
+            } else if (serverSelect.value === 'local') {
+                wsAddress = "ws://localhost:12345";
+            } else {
+                wsAddress = customServerInput.value.trim();
+                if (!wsAddress) {
+                    loginStatus.textContent = '请输入自定义服务器地址';
+                    return false;
+                }
+            }
+
+            socket = new WebSocket(wsAddress);
 
             socket.onopen = () => {
-                addMessage('系统', '已连接服务器');
-                socket.send(JSON.stringify({ type: 'login', username, password: loginPassword.value }));
+                addSystemMessage('已连接服务器');
+                onOpenCallback();
             };
 
             socket.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                console.log("收到消息", data);
+                console.log('接收数据', data);
 
-                if (data.type === 'login') {
-                    if (data.success) {
-                        loginStatus.style.color = '#43b581';
-                        loginStatus.textContent = '登录成功！';
-                        setTimeout(() => {
+                switch (data.type) {
+                    case 'login':
+                        if (data.success) {
+                            loginStatus.style.color = '#43b581';
+                            loginStatus.textContent = '登录成功！';
+
+                            currentUser = {
+                                id: data.uid,
+                                username: data.username,
+                            };
+
+                            // 更新用户名映射
+                            if (data.usernameMap) {
+                                Object.entries(data.usernameMap).forEach(([id, username]) => {
+                                    uidToUsernameMap.set(parseInt(id), username);
+                                });
+                            }
+
+                            // 更新好友列表和黑名单
+                            friends = data.friends || [];
+                            pendingRequests = data.pendingRequests || [];
+                            blacklist = data.blacklist || [];
+
+                            // 渲染界面
+                            renderFriendList();
+                            renderBlacklist();
+
                             loginModal.style.display = 'none';
                             app.style.display = 'flex';
-                            // 自动加入已保存频道列表第一个频道（如果有）
-                            const channels = loadStoredChannels();
-                            if (channels.length > 0) {
-                                joinExistingChannel(channels[0]);
+                            chatHeader.textContent = '请选择好友聊天';
+
+                            // 如果有待处理的好友请求，显示通知
+                            if (pendingRequests.length > 0) {
+                                addSystemMessage(`你有 ${pendingRequests.length} 个待处理的好友请求`);
                             }
-                            updateChannelList();
-                        }, 800);
-                    } else {
-                        loginStatus.style.color = '#f04747';
-                        loginStatus.textContent = data.error || '登录失败';
-                    }
-                } else if (data.type === 'joined') {
-                    // 服务器加入频道成功后，保存频道到本地列表（去重）
-                    const channel = data.channel;
-                    let channels = loadStoredChannels();
-                    if (!channels.includes(channel)) {
-                        channels.push(channel);
-                        saveChannels(channels);
-                    }
-                    currentChannel = channel;
-                    chatHeader.textContent = `频道: #${channel}`;
-                    chatMessages.innerHTML = '';
-                    chatInputContainer.style.display = 'flex';
-                    addMessage('系统', `加入频道 #${channel}`);
-                    updateChannelList();
-                } else if (data.type === 'message') {
-                    if (data.channel === currentChannel) {
-                        addMessage(data.from, data.content);
-                    }
-                } else if (data.type === 'info') {
-                    addMessage('系统', data.message);
-                } else if (data.type === 'error') {
-                    addMessage('错误', data.message);
+
+                        } else {
+                            loginStatus.style.color = '#f04747';
+                            loginStatus.textContent = data.error || '登录失败';
+                        }
+                        break;
+
+                    case 'register':
+                        if (data.success) {
+                            loginStatus.style.color = '#43b581';
+                            loginStatus.textContent = '注册成功！请登录。';
+                        } else {
+                            loginStatus.style.color = '#f04747';
+                            loginStatus.textContent = data.error || '注册失败';
+                        }
+                        break;
+
+                    case 'friend_request':
+                        addFriendRequestNotification(data.fromId, data.fromName);
+                        break;
+
+                    case 'friend_added':
+                        if (!friends.includes(data.friendId)) {
+                            friends.push(data.friendId);
+                        }
+                        uidToUsernameMap.set(data.friendId, data.friendName);
+                        renderFriendList();
+                        addSystemMessage(`你与 ${data.friendName} 已成为好友`);
+                        break;
+
+                    case 'friend_removed':
+                        friends = friends.filter(id => id !== data.friendId);
+                        if (currentChatFriend && currentChatFriend.id === data.friendId) {
+                            currentChatFriend = null;
+                            chatMessages.innerHTML = '';
+                            chatInputContainer.style.display = 'none';
+                            chatHeader.textContent = '请选择好友聊天';
+                        }
+                        renderFriendList();
+                        addSystemMessage(`已删除好友：${uidToUsernameMap.get(data.friendId) || data.friendId}`);
+                        break;
+
+                    case 'blacklist_added':
+                        if (!blacklist.includes(data.blockedId)) {
+                            blacklist.push(data.blockedId);
+                        }
+                        uidToUsernameMap.set(data.blockedId, data.blockedName);
+                        renderBlacklist();
+                        addSystemMessage(`已加入黑名单：${data.blockedName}`);
+                        break;
+
+                    case 'blacklist_removed':
+                        blacklist = blacklist.filter(id => id !== data.blockedId);
+                        renderBlacklist();
+                        addSystemMessage(`已从黑名单移除：${uidToUsernameMap.get(data.blockedId) || data.blockedId}`);
+                        break;
+
+                    case 'chat_history':
+                        if (data.friendId === (currentChatFriend && currentChatFriend.id)) {
+                            chatMessages.innerHTML = '';
+                            if (data.history && data.history.length) {
+                                data.history.forEach(msg => {
+                                    const isSelf = msg.fromId === currentUser.id;
+                                    const username = uidToUsernameMap.get(msg.fromId) || `用户${msg.fromId}`;
+                                    addChatMessage(username, msg.text, isSelf);
+                                });
+                            } else {
+                                addSystemMessage('暂无聊天记录');
+                            }
+                        }
+                        break;
+
+                    case 'message':
+                        const { fromId, toId, text } = data;
+                        const friendId = currentChatFriend && currentChatFriend.id;
+                        if (friendId && (fromId === friendId || toId === friendId)) {
+                            const isSelf = fromId === currentUser.id;
+                            const senderName = uidToUsernameMap.get(fromId) || `用户${fromId}`;
+                            addChatMessage(senderName, text, isSelf);
+                        } else {
+                            // 不是当前聊天好友的消息可以考虑显示通知或忽略
+                            addSystemMessage(`收到来自${uidToUsernameMap.get(fromId) || `用户${fromId}`}的新消息`);
+                        }
+                        break;
+
+                    case 'message_sent':
+                        // 消息发送成功的确认，可以在这里处理
+                        break;
+
+                    case 'usernames':
+                        // 更新用户名映射
+                        Object.entries(data.map).forEach(([id, username]) => {
+                            uidToUsernameMap.set(parseInt(id), username);
+                        });
+                        // 重新渲染可能需要更新的列表
+                        renderFriendList();
+                        renderBlacklist();
+                        break;
+
+                    case 'error':
+                        addSystemMessage(`错误：${data.message}`);
+                        break;
+
+                    default:
+                        console.warn('未知消息类型', data.type);
                 }
             };
 
-            socket.onerror = () => {
-                addMessage('系统', '连接错误，请刷新页面重试');
+            socket.onclose = () => {
+                resetToLogin('服务器断开连接');
             };
 
-            socket.onclose = () => {
-                addMessage('系统', '连接已关闭');
+            socket.onerror = (err) => {
+                console.error('WebSocket错误', err);
+                loginStatus.textContent = 'WebSocket连接错误';
             };
+
+            return true;
         }
 
-        // 登录按钮事件
-        loginBtn.addEventListener('click', () => {
-            username = loginUsername.value.trim();
-            if (!username) {
-                loginStatus.textContent = '请输入用户名';
+        // 渲染好友列表
+        function renderFriendList() {
+            friendListEl.innerHTML = '';
+
+            if (friends.length === 0) {
+                friendListEl.innerHTML = '<p style="color:#72767d; padding: 12px;">好友列表为空</p>';
                 return;
             }
-            if (!loginPassword.value) {
-                loginStatus.textContent = '请输入密码';
+
+            friends.forEach(id => {
+                const friendName = uidToUsernameMap.get(id) || `用户${id}`;
+                const friendItem = document.createElement('div');
+                friendItem.className = 'friend-item';
+                if (currentChatFriend && currentChatFriend.id === id) friendItem.classList.add('active');
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'friend-name';
+                nameDiv.textContent = `${friendName} (${id})`;
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'friend-actions';
+
+                // 删除好友按钮
+                const delBtn = document.createElement('button');
+                delBtn.textContent = '删除';
+                delBtn.title = '删除好友';
+                delBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (confirm(`确定删除好友【${friendName}】吗？`)) {
+                        socket.send(JSON.stringify({
+                            type: 'remove_friend',
+                            friendId: id,
+                        }));
+                    }
+                };
+
+                // 加入黑名单按钮
+                const blackBtn = document.createElement('button');
+                blackBtn.textContent = '拉黑';
+                blackBtn.title = '加入黑名单';
+                blackBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (confirm(`确定将【${friendName}】加入黑名单吗？`)) {
+                        socket.send(JSON.stringify({
+                            type: 'block',
+                            userId: id,
+                        }));
+                    }
+                };
+
+                actionsDiv.appendChild(delBtn);
+                actionsDiv.appendChild(blackBtn);
+
+                friendItem.appendChild(nameDiv);
+                friendItem.appendChild(actionsDiv);
+
+                friendItem.onclick = () => {
+                    if (currentChatFriend && currentChatFriend.id === id) return; // 已选中
+                    currentChatFriend = { id, username: friendName };
+                    chatHeader.textContent = `与【${friendName}】聊天`;
+                    chatMessages.innerHTML = '';
+                    chatInputContainer.style.display = 'flex';
+
+                    // 请求聊天记录
+                    socket.send(JSON.stringify({
+                        type: 'chat_history',
+                        friendId: id,
+                    }));
+
+                    renderFriendList();
+                };
+
+                friendListEl.appendChild(friendItem);
+            });
+        }
+
+        // 渲染黑名单列表
+        function renderBlacklist() {
+            if (blacklist.length === 0) {
+                blacklistContainer.style.display = 'none';
                 return;
             }
-            loginStatus.textContent = '';
-            connectWebSocket();
-        });
+            blacklistContainer.style.display = 'block';
+            blacklistEl.innerHTML = '';
 
-        // 加入新频道按钮事件
-        joinChannelBtn.addEventListener('click', () => {
-            const channel = channelInput.value.trim();
-            if (!channel) return;
-            // 通过服务器 join 频道
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'join', channel }));
+            blacklist.forEach(id => {
+                const name = uidToUsernameMap.get(id) || `用户${id}`;
+                const item = document.createElement('div');
+                item.className = 'blacklist-item';
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'blacklist-name';
+                nameDiv.textContent = `${name} (${id})`;
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'blacklist-actions';
+
+                // 移除黑名单按钮
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '解除';
+                removeBtn.title = '移除黑名单';
+                removeBtn.onclick = () => {
+                    if (confirm(`确定将【${name}】从黑名单移除吗？`)) {
+                        socket.send(JSON.stringify({
+                            type: 'unblock',
+                            userId: id,
+                        }));
+                    }
+                };
+
+                actionsDiv.appendChild(removeBtn);
+
+                item.appendChild(nameDiv);
+                item.appendChild(actionsDiv);
+
+                blacklistEl.appendChild(item);
+            });
+        }
+
+        // 发送消息
+        function sendMessage() {
+            if (!currentChatFriend) {
+                alert('请先选择好友聊天');
+                return;
             }
-            channelInput.value = '';
-        });
+            const text = chatInput.value.trim();
+            if (!text) return;
 
-        // 发送消息按钮事件
-        sendButton.addEventListener('click', () => {
-            const msg = chatInput.value.trim();
-            if (!msg) return;
-            socket.send(JSON.stringify({ type: 'message', content: msg }));
+            socket.send(JSON.stringify({
+                type: 'message',
+                toId: currentChatFriend.id,
+                text,
+            }));
+
+            // 自己消息立即显示
+            addChatMessage(currentUser.username, text, true);
             chatInput.value = '';
-        });
+        }
 
-        // 回车发送消息支持
-        chatInput.addEventListener('keydown', e => {
+        // 发送好友请求
+        function sendFriendRequest() {
+            const input = friendSearchInput.value.trim();
+            if (!input) return;
+
+            socket.send(JSON.stringify({
+                type: 'send_friend_request',
+                identifier: input,
+            }));
+
+            friendSearchInput.value = '';
+            addSystemMessage('好友请求已发送');
+        }
+
+        // 登录函数
+        function doLogin() {
+            const username = loginUsername.value.trim();
+            const password = loginPassword.value.trim();
+
+            if (!username || !password) {
+                loginStatus.textContent = '请输入用户名和密码';
+                return;
+            }
+
+            if (!connectWebSocket(() => {
+                // 连接成功后发送登录请求
+                socket.send(JSON.stringify({
+                    type: 'login',
+                    username,
+                    password,
+                    version: CLIENT_VERSION,
+                }));
+            })) {
+                // 连接失败处理
+                loginStatus.textContent = 'WebSocket连接失败';
+            }
+        }
+
+        // 注册函数
+        function doRegister() {
+            const username = loginUsername.value.trim();
+            const password = loginPassword.value.trim();
+
+            if (!username || !password) {
+                loginStatus.textContent = '请输入用户名和密码';
+                return;
+            }
+
+            if (!connectWebSocket(() => {
+                // 连接成功后发送注册请求
+                socket.send(JSON.stringify({
+                    type: 'register',
+                    username,
+                    password,
+                    version: CLIENT_VERSION,
+                }));
+            })) {
+                loginStatus.textContent = 'WebSocket连接失败';
+            }
+        }
+
+        // 添加好友按钮点击
+        addFriendBtn.onclick = sendFriendRequest;
+
+        // 发送消息按钮点击
+        sendButton.onclick = sendMessage;
+
+        // 输入框回车发送消息
+        chatInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                sendButton.click();
+                sendMessage();
             }
         });
 
+        // 登录和注册按钮事件绑定
+        loginBtn.onclick = doLogin;
+        registerBtn.onclick = doRegister;
+
+        // 页面加载默认聚焦用户名输入框
+        window.onload = () => {
+            loginUsername.focus();
+        };
     </script>
 </body>
 
