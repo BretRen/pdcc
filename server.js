@@ -21,7 +21,7 @@ wss.on("connection", (ws) => {
   console.log("🟢 客户端已连接");
 
   ws.isAuthenticated = false;
-  ws.permission = 0;
+  ws.permission = 0; // 未登录权限0
   ws.loginAttempts = 0;
 
   ws.send(JSON.stringify({ type: "v", data: v }));
@@ -55,6 +55,7 @@ wss.on("connection", (ws) => {
       return;
     }
 
+    // 未登录状态，仅允许 /login 和 /register 命令
     if (!ws.isAuthenticated) {
       if (
         data.type === "command" &&
@@ -77,7 +78,7 @@ wss.on("connection", (ws) => {
 
         if (cmd === "/register") {
           db.run(
-            "INSERT INTO users(username, password, permission) VALUES(?, ?, 1)",
+            "INSERT INTO users(username, password, role) VALUES(?, ?, 1)",
             [username, password],
             function (err) {
               if (err) {
@@ -95,6 +96,7 @@ wss.on("connection", (ws) => {
                       data: "❌ 注册失败，请稍后再试",
                     })
                   );
+                  console.log(err);
                 }
               } else {
                 ws.send(
@@ -123,7 +125,7 @@ wss.on("connection", (ws) => {
               if (row) {
                 ws.isAuthenticated = true;
                 ws.username = row.username;
-                ws.permission = row.permission;
+                ws.permission = row.role;
                 clearTimeout(kickTimer);
                 ws.send(
                   JSON.stringify({
@@ -160,7 +162,9 @@ wss.on("connection", (ws) => {
       return;
     }
 
+    // 已登录用户消息处理
     if (data.type === "msg") {
+      // 普通聊天消息广播给其他已登录客户端
       for (const client of wss.clients) {
         if (
           client !== ws &&
@@ -171,6 +175,7 @@ wss.on("connection", (ws) => {
         }
       }
     } else if (data.type === "v") {
+      // 版本检测
       if (data.data != v) {
         ws.send(
           JSON.stringify({
@@ -179,6 +184,68 @@ wss.on("connection", (ws) => {
           })
         );
         ws.close(1000, "版本不一致");
+      }
+    }
+    // 新增的客户端执行服务端权限命令代码
+    else if (data.type === "command") {
+      const commandPermissions = {
+        "/kick": 4,
+      };
+
+      const parts = data.data.trim().split(/\s+/);
+      const cmd = parts[0].toLowerCase();
+      const args = parts.slice(1);
+
+      if (commandPermissions.hasOwnProperty(cmd)) {
+        const requiredLevel = commandPermissions[cmd];
+        if (ws.permission >= requiredLevel) {
+          if (cmd === "/kick") {
+            if (args.length < 1) {
+              ws.send(
+                JSON.stringify({ type: "error", data: "用法: /kick <用户名>" })
+              );
+              return;
+            }
+            const targetUsername = args[0];
+            let kicked = false;
+            for (const client of wss.clients) {
+              if (
+                client.readyState === WebSocket.OPEN &&
+                client.username === targetUsername
+              ) {
+                client.send(
+                  JSON.stringify({ type: "error", data: "⛔ 你已被管理员踢出" })
+                );
+                client.close(4002, "被踢出");
+                kicked = true;
+              }
+            }
+            ws.send(
+              JSON.stringify({
+                type: "sys",
+                data: kicked
+                  ? `✅ 已成功踢出用户 ${targetUsername}`
+                  : `⚠️ 未找到在线用户 ${targetUsername}`,
+              })
+            );
+          }
+        } else {
+          console.log(ws.permission);
+          console.log(requiredLevel);
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              data: `⛔ 权限不足，无法执行 ${cmd}`,
+            })
+          );
+        }
+      } else {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            data: `❓ 未知或不支持的服务端命令: ${cmd}`,
+          })
+        );
       }
     } else {
       ws.send(

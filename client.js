@@ -2,12 +2,6 @@ const WebSocket = require("ws");
 const { spawn } = require("child_process");
 const path = require("path");
 
-const url = "ws://localhost:8080";
-const v = "1.0.7";
-
-let ws;
-let isAuthenticated = false;
-
 function restart() {
   const scriptPath = path.resolve(process.argv[1]);
   console.log("♻️ 正在重启:", scriptPath);
@@ -18,6 +12,10 @@ function restart() {
   });
   process.exit(0);
 }
+
+let ws;
+const url = "ws://localhost:8080";
+const v = "1.0.8";
 
 function connect() {
   ws = new WebSocket(url);
@@ -36,28 +34,18 @@ function connect() {
       return;
     }
 
-    switch (msg.type) {
-      case "sys":
-        console.log(`\n📢 系统消息: ${msg.data}`);
-        if (msg.data.includes("登录成功")) {
-          isAuthenticated = true;
-        }
-        break;
-      case "echo":
-        console.log(`\n📨 回显: ${msg.data}`);
-        break;
-      case "msg":
-        console.log(`\n💬 聊天消息: ${msg.data}`);
-        break;
-      case "v":
-        ws.send(JSON.stringify({ type: "v", data: v }));
-        break;
-      case "error":
-        console.log(`\n\x1b[31m[ERROR] ${msg.data}\x1b[0m`);
-        break;
-      default:
-        console.log(`\n🔖 [${msg.type}] ${msg.data}`);
-        break;
+    if (msg.type === "sys") {
+      console.log(`\n📢 系统消息: ${msg.data}`);
+    } else if (msg.type === "echo") {
+      console.log(`\n📨 回显: ${msg.data}`);
+    } else if (msg.type === "msg") {
+      console.log(`\n💬 聊天消息: ${msg.data}`);
+    } else if (msg.type === "v") {
+      ws.send(JSON.stringify({ type: "v", data: v }));
+    } else if (msg.type === "error") {
+      console.log(`\n\x1b[31m[ERROR] ${msg.data}\x1b[0m`);
+    } else {
+      console.log(`\n🔖 [${msg.type}] ${msg.data}`);
     }
 
     prompt();
@@ -65,7 +53,6 @@ function connect() {
 
   ws.on("close", () => {
     console.log("\n❌ 与服务器断开连接");
-    isAuthenticated = false;
   });
 
   ws.on("error", (err) => {
@@ -81,35 +68,9 @@ function handleCommand(cmdLine) {
   const parts = cmdLine.trim().split(/\s+/);
   const cmd = parts[0];
 
-  const canUseAlways = ["/quit", "/rejoin", "/restart", "/help"];
-  const canUseBeforeLogin = ["/login", "/register"];
-
-  // 连接状态判断
-  const connected = ws && ws.readyState === WebSocket.OPEN;
-
-  if (!connected) {
-    // 未连接时，只允许某些本地命令
-    if (!canUseAlways.includes(cmd)) {
-      console.log("\x1b[F\x1b[2K"); // 清除当前输入行
-      console.log("⚠️ 尚未连接服务器，可用命令：/rejoin /quit /restart /help");
-      prompt();
-      return;
-    }
-  } else if (!isAuthenticated) {
-    // 已连接但未登录时，只允许登录注册命令和本地命令
-    if (!canUseBeforeLogin.includes(cmd) && !canUseAlways.includes(cmd)) {
-      console.log("\x1b[F\x1b[2K"); // 清除当前输入行
-      console.log(
-        "⚠️ 请先登录或注册，允许的命令：/login /register /quit /rejoin /restart /help"
-      );
-      prompt();
-      return;
-    }
-  }
-
   switch (cmd) {
     case "/help":
-      console.log("🆘 可用命令: /help /quit /rejoin /restart /login /register");
+      console.log("🆘 可用命令: /help /quit /rejoin /restart");
       break;
 
     case "/quit":
@@ -127,36 +88,28 @@ function handleCommand(cmdLine) {
       restart();
       break;
 
-    case "/login":
-    case "/register":
-      if (parts.length !== 3) {
-        console.log(`⚠️ 格式错误，正确格式: ${cmd} 用户名 密码`);
-        break;
-      }
-      ws.send(JSON.stringify({ type: "command", data: cmdLine }));
-      break;
-
     default:
-      // 普通聊天消息
-      if (ws && ws.readyState === WebSocket.OPEN && isAuthenticated) {
-        ws.send(JSON.stringify({ type: "msg", data: cmdLine }));
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        // 以 command 类型发送命令（如 /login、/register）
+        if (cmdLine.startsWith("/")) {
+          ws.send(JSON.stringify({ type: "command", data: cmdLine }));
+        } else {
+          ws.send(JSON.stringify({ type: "msg", data: cmdLine }));
+        }
       } else {
         process.stdout.write("\x1b[F\x1b[2K");
-        console.log("⚠️ 未连接或未登录，消息未发送");
+        console.log("⚠️ 未连接，消息未发送");
       }
       break;
   }
+
   prompt();
 }
 
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => {
   const input = chunk.toString().trim();
-  if (input.startsWith("/")) {
-    handleCommand(input);
-  } else {
-    handleCommand(input); // 普通消息
-  }
+  handleCommand(input);
 });
 
 connect();
