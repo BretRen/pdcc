@@ -18,10 +18,10 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
 )`);
 // 应该为role，谢谢
 
-console.log("✅ WebSocket 服务器运行在 ws://localhost:8080");
+console.log("[LOG] WebSocket 服务器运行在 ws://localhost:8080");
 
 wss.on("connection", (ws) => {
-  console.log("🟢 客户端已连接");
+  console.log("[Client] 客户端已连接");
 
   ws.isAuthenticated = false;
   ws.permission = 0; // 未登录权限0
@@ -38,9 +38,10 @@ wss.on("connection", (ws) => {
   const kickTimer = setTimeout(() => {
     if (!ws.isAuthenticated) {
       ws.send(
-        JSON.stringify({ type: "error", data: "❌ 超过30秒未登录，已被踢出" })
+        JSON.stringify({ type: "error", data: "超过30秒未登录，已被踢出" })
       );
       ws.close(4000, "未登录超时");
+      console.log("[ERROR] 超过30秒未登录，已被踢出");
     }
   }, 30000);
 
@@ -52,7 +53,7 @@ wss.on("connection", (ws) => {
       ws.send(
         JSON.stringify({
           type: "error",
-          data: "❌ 非法消息格式（必须是 JSON）",
+          data: " 非法消息格式（必须是 JSON）",
         })
       );
       return;
@@ -73,7 +74,7 @@ wss.on("connection", (ws) => {
           ws.send(
             JSON.stringify({
               type: "error",
-              data: `❌ 格式错误，正确格式: ${cmd} 用户名 密码`,
+              data: ` 格式错误，正确格式: ${cmd} 用户名 密码`,
             })
           );
           return;
@@ -86,7 +87,7 @@ wss.on("connection", (ws) => {
               ws.send(
                 JSON.stringify({
                   type: "error",
-                  data: "❌ 密码加密失败",
+                  data: " 密码加密失败",
                 })
               );
               return;
@@ -100,7 +101,7 @@ wss.on("connection", (ws) => {
                     ws.send(
                       JSON.stringify({
                         type: "error",
-                        data: "❌ 用户名已存在，请换一个",
+                        data: " 用户名已存在，请换一个",
                       })
                     );
                   } else {
@@ -108,7 +109,7 @@ wss.on("connection", (ws) => {
                     ws.send(
                       JSON.stringify({
                         type: "error",
-                        data: "❌ 注册失败，请稍后再试",
+                        data: " 注册失败，请稍后再试",
                       })
                     );
                     console.error(err);
@@ -117,7 +118,7 @@ wss.on("connection", (ws) => {
                   ws.send(
                     JSON.stringify({
                       type: "sys",
-                      data: "✅ 注册成功，请使用 /login 登录",
+                      data: " 注册成功，请使用 /login 登录",
                     })
                   );
                 }
@@ -134,7 +135,7 @@ wss.on("connection", (ws) => {
                 ws.send(
                   JSON.stringify({
                     type: "error",
-                    data: "❌ 登录失败，请稍后再试",
+                    data: " 登录失败，请稍后再试",
                   })
                 );
                 return;
@@ -145,14 +146,14 @@ wss.on("connection", (ws) => {
                 ws.send(
                   JSON.stringify({
                     type: "error",
-                    data: "❌ 用户名或密码错误",
+                    data: " 用户名或密码错误",
                   })
                 );
                 if (ws.loginAttempts >= 3) {
                   ws.send(
                     JSON.stringify({
                       type: "error",
-                      data: "❌ 连续登录失败3次，已断开连接",
+                      data: " 连续登录失败3次，已断开连接",
                     })
                   );
                   ws.close(4001, "连续登录失败");
@@ -180,7 +181,7 @@ wss.on("connection", (ws) => {
                   ws.send(
                     JSON.stringify({
                       type: "sys",
-                      data: "✅ 登录成功，可以开始聊天了",
+                      data: " 登录成功，可以开始聊天了",
                     })
                   );
                 } else {
@@ -188,14 +189,14 @@ wss.on("connection", (ws) => {
                   ws.send(
                     JSON.stringify({
                       type: "error",
-                      data: "❌ 用户名或密码错误",
+                      data: " 用户名或密码错误",
                     })
                   );
                   if (ws.loginAttempts >= 3) {
                     ws.send(
                       JSON.stringify({
                         type: "error",
-                        data: "❌ 连续登录失败3次，已断开连接",
+                        data: " 连续登录失败3次，已断开连接",
                       })
                     );
                     ws.close(4001, "连续登录失败");
@@ -209,7 +210,7 @@ wss.on("connection", (ws) => {
         ws.send(
           JSON.stringify({
             type: "error",
-            data: "❌ 请先登录或注册，允许的命令：/login /register",
+            data: " 请先登录或注册，允许的命令：/login /register",
           })
         );
       }
@@ -270,7 +271,7 @@ wss.on("connection", (ws) => {
                 client.username === targetUsername
               ) {
                 client.send(
-                  JSON.stringify({ type: "error", data: "⛔ 你已被管理员踢出" })
+                  JSON.stringify({ type: "error", data: " 你已被管理员踢出" })
                 );
                 client.close(4002, "被踢出");
                 kicked = true;
@@ -280,8 +281,8 @@ wss.on("connection", (ws) => {
               JSON.stringify({
                 type: "sys",
                 data: kicked
-                  ? `✅ 已成功踢出用户 ${targetUsername}`
-                  : `⚠️ 未找到在线用户 ${targetUsername}`,
+                  ? ` 已成功踢出用户 ${targetUsername}`
+                  : ` 未找到在线用户 ${targetUsername}`,
               })
             );
           } else if (cmd === "/ban") {
@@ -329,7 +330,7 @@ wss.on("connection", (ws) => {
                 ws.send(
                   JSON.stringify({
                     type: "sys",
-                    data: `✅ 用户 ${targetUsername} 已封禁${
+                    data: ` 用户 ${targetUsername} 已封禁${
                       kicked ? "并踢出" : "（但当前未在线）"
                     }`,
                   })
@@ -349,7 +350,7 @@ wss.on("connection", (ws) => {
         ws.send(
           JSON.stringify({
             type: "error",
-            data: `❓ 未知或不支持的服务端命令: ${cmd}`,
+            data: ` 未知或不支持的服务端命令: ${cmd}`,
           })
         );
       }
@@ -357,14 +358,14 @@ wss.on("connection", (ws) => {
       ws.send(
         JSON.stringify({
           type: "error",
-          data: `❓ 不支持的消息类型: ${data.type}`,
+          data: ` 不支持的消息类型: ${data.type}`,
         })
       );
     }
   });
 
   ws.on("close", () => {
-    console.log("🔴 客户端断开连接");
+    console.log(" 客户端断开连接");
     clearTimeout(kickTimer);
   });
 });
@@ -389,7 +390,7 @@ function handleServerCommand(cmdLine) {
     process.exit(0);
   } else if (cmd === "/kick") {
     if (serverPermission !== -1 && serverPermission < 4) {
-      console.log("⛔ 权限不足，无法执行 /kick");
+      console.log(" 权限不足，无法执行 /kick");
       return;
     }
 
@@ -407,19 +408,19 @@ function handleServerCommand(cmdLine) {
         client.send(
           JSON.stringify({
             type: "error",
-            data: "⛔ 你已被管理员踢出",
+            data: " 你已被管理员踢出",
           })
         );
         client.close(4002, "被踢出");
-        console.log(`✅ 已踢出用户 ${targetUsername}`);
+        console.log(` 已踢出用户 ${targetUsername}`);
         kicked = true;
       }
     }
     if (!kicked) {
-      console.log(`⚠️ 没有找到用户名为 ${targetUsername} 的在线用户`);
+      console.log(` 没有找到用户名为 ${targetUsername} 的在线用户`);
     }
   } else {
-    console.log("❓ 未知命令，请输入 /help 查看可用命令");
+    console.log(" 未知命令，请输入 /help 查看可用命令");
   }
   rl.prompt();
 }
