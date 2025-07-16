@@ -2,18 +2,20 @@ const WebSocket = require("ws");
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 const readline = require("readline");
+const bcrypt = require("bcrypt");
 
 const wss = new WebSocket.Server({ port: 8080 });
-const v = "1.0.7";
+const v = "1.0.8";
 const db = new sqlite3.Database(path.resolve(__dirname, "pdcc.db"));
 
-// 初始化用户表（增加权限字段）
+// 初始化用户表（确保字段名统一为 permission）
 db.run(`CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE,
   password TEXT,
   permission INTEGER DEFAULT 1
 )`);
+// 应该为role，谢谢
 
 console.log("✅ WebSocket 服务器运行在 ws://localhost:8080");
 
@@ -77,41 +79,54 @@ wss.on("connection", (ws) => {
         }
 
         if (cmd === "/register") {
-          db.run(
-            "INSERT INTO users(username, password, role) VALUES(?, ?, 1)",
-            [username, password],
-            function (err) {
-              if (err) {
-                if (err.message.includes("UNIQUE")) {
-                  ws.send(
-                    JSON.stringify({
-                      type: "error",
-                      data: "❌ 用户名已存在，请换一个",
-                    })
-                  );
+          const saltRounds = 10;
+          bcrypt.hash(password, saltRounds, (err, hash) => {
+            if (err) {
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  data: "❌ 密码加密失败",
+                })
+              );
+              return;
+            }
+            db.run(
+              "INSERT INTO users(username, password, permission) VALUES(?, ?, 1)",
+              [username, hash],
+              function (err) {
+                if (err) {
+                  if (err.message.includes("UNIQUE")) {
+                    ws.send(
+                      JSON.stringify({
+                        type: "error",
+                        data: "❌ 用户名已存在，请换一个",
+                      })
+                    );
+                  } else {
+                    ws.send(
+                      JSON.stringify({
+                        type: "error",
+                        data: "❌ 注册失败，请稍后再试",
+                      })
+                    );
+                    console.error(err);
+                  }
                 } else {
                   ws.send(
                     JSON.stringify({
-                      type: "error",
-                      data: "❌ 注册失败，请稍后再试",
+                      type: "sys",
+                      data: "✅ 注册成功，请使用 /login 登录",
                     })
                   );
-                  console.log(err);
                 }
-              } else {
-                ws.send(
-                  JSON.stringify({
-                    type: "sys",
-                    data: "✅ 注册成功，请使用 /login 登录",
-                  })
-                );
               }
-            }
-          );
+            );
+          });
         } else if (cmd === "/login") {
+          // 先查出用户密码哈希，再用 bcrypt 验证
           db.get(
-            "SELECT * FROM users WHERE username = ? AND password = ?",
-            [username, password],
+            "SELECT * FROM users WHERE username = ?",
+            [username],
             (err, row) => {
               if (err) {
                 ws.send(
@@ -122,21 +137,14 @@ wss.on("connection", (ws) => {
                 );
                 return;
               }
-              if (row) {
-                ws.isAuthenticated = true;
-                ws.username = row.username;
-                ws.permission = row.role;
-                clearTimeout(kickTimer);
-                ws.send(
-                  JSON.stringify({
-                    type: "sys",
-                    data: "✅ 登录成功，可以开始聊天了",
-                  })
-                );
-              } else {
+
+              if (!row) {
                 ws.loginAttempts++;
                 ws.send(
-                  JSON.stringify({ type: "error", data: "❌ 用户名或密码错误" })
+                  JSON.stringify({
+                    type: "error",
+                    data: "❌ 用户名或密码错误",
+                  })
                 );
                 if (ws.loginAttempts >= 3) {
                   ws.send(
@@ -147,7 +155,40 @@ wss.on("connection", (ws) => {
                   );
                   ws.close(4001, "连续登录失败");
                 }
+                return;
               }
+
+              bcrypt.compare(password, row.password, (err, result) => {
+                if (result) {
+                  ws.isAuthenticated = true;
+                  ws.username = row.username;
+                  ws.permission = row.permission;
+                  clearTimeout(kickTimer);
+                  ws.send(
+                    JSON.stringify({
+                      type: "sys",
+                      data: "✅ 登录成功，可以开始聊天了",
+                    })
+                  );
+                } else {
+                  ws.loginAttempts++;
+                  ws.send(
+                    JSON.stringify({
+                      type: "error",
+                      data: "❌ 用户名或密码错误",
+                    })
+                  );
+                  if (ws.loginAttempts >= 3) {
+                    ws.send(
+                      JSON.stringify({
+                        type: "error",
+                        data: "❌ 连续登录失败3次，已断开连接",
+                      })
+                    );
+                    ws.close(4001, "连续登录失败");
+                  }
+                }
+              });
             }
           );
         }
@@ -186,7 +227,7 @@ wss.on("connection", (ws) => {
         ws.close(1000, "版本不一致");
       }
     }
-    // 新增的客户端执行服务端权限命令代码
+    // 客户端执行服务端权限命令
     else if (data.type === "command") {
       const commandPermissions = {
         "/kick": 4,
@@ -230,8 +271,6 @@ wss.on("connection", (ws) => {
             );
           }
         } else {
-          console.log(ws.permission);
-          console.log(requiredLevel);
           ws.send(
             JSON.stringify({
               type: "error",
@@ -263,9 +302,7 @@ wss.on("connection", (ws) => {
   });
 });
 
-//
 // 服务端控制台命令（权限等级为 -1，拥有所有权限）
-//
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
