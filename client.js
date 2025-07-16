@@ -2,6 +2,7 @@ import WebSocket from "ws";
 import { spawn } from "child_process";
 import path from "path";
 import chalk from "chalk";
+import fs from "fs";
 function restart() {
   const scriptPath = path.resolve(process.argv[1]);
   console.log(chalk.green("[Restart] 正在重启:", scriptPath));
@@ -22,6 +23,12 @@ function connect() {
 
   ws.on("open", () => {
     console.log(chalk.green("已连接服务器"));
+    try {
+      const data = fs.readFileSync(".pdcc.login.token.txt", "utf8"); // 第二个参数是编码，常用utf8，读出来是字符串
+      ws.send(JSON.stringify({ type: "command", data: "/login", token: data }));
+    } catch (err) {
+      console.error("读取token文件错误！", err);
+    }
     prompt();
   });
 
@@ -44,6 +51,14 @@ function connect() {
       ws.send(JSON.stringify({ type: "v", data: v }));
     } else if (msg.type === "error") {
       console.log(chalk.red(`\n ${msg.data}`));
+    } else if (msg.type === "token") {
+      fs.writeFile(".pdcc.login.token.txt", msg.data, "utf8", (err) => {
+        if (err) {
+          console.log(chalk.reg("Token保存失败", err));
+        } else {
+          console.log(chalk.green("token已保存，下次无需输入密码。"));
+        }
+      });
     } else {
       console.log(`\n[${msg.type}] ${msg.data}`);
     }

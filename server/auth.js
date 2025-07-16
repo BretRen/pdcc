@@ -1,6 +1,12 @@
 import bcrypt from "bcrypt";
+import { generateToken, verifyJWT } from "./tool.js";
 // 处理未认证用户
+import chalk from "chalk";
 export function handleUnauthenticated(ws, data, kickTimer, db) {
+  if (data.type === "command" && data.token) {
+    handleLogin(ws, null, null, db, kickTimer, data.token);
+    return;
+  }
   if (
     data.type === "command" &&
     (data.data.startsWith("/login ") || data.data.startsWith("/register "))
@@ -9,6 +15,7 @@ export function handleUnauthenticated(ws, data, kickTimer, db) {
     const cmd = parts[0];
     const username = parts[1];
     const password = parts[2];
+    const token = data.token;
 
     if (!username || !password) {
       ws.send(
@@ -23,7 +30,7 @@ export function handleUnauthenticated(ws, data, kickTimer, db) {
     if (cmd === "/register") {
       handleRegister(ws, username, password, db);
     } else if (cmd === "/login") {
-      handleLogin(ws, username, password, db, kickTimer);
+      handleLogin(ws, username, password, db, kickTimer, token);
     }
   } else {
     ws.send(
@@ -75,7 +82,14 @@ function handleRegister(ws, username, password, db) {
 }
 
 // 处理登录
-export function handleLogin(ws, username, password, db, kickTimer) {
+export function handleLogin(ws, username, password, db, kickTimer, token) {
+  if (token) {
+    if (verifyJWT(token, ws)) {
+      username = ws.payload;
+      ws.token = token;
+      console.log(username);
+    }
+  }
   db.get("SELECT * FROM users WHERE username = ?", [username], (err, row) => {
     if (err) {
       ws.send(JSON.stringify({ type: "error", data: " 登录失败，请稍后再试" }));
@@ -85,6 +99,15 @@ export function handleLogin(ws, username, password, db, kickTimer) {
     if (!row) {
       handleFailedLogin(ws);
       return;
+    }
+    if (ws.payload === username) {
+      ws.send(JSON.stringify({ type: "sys", data: "自动登录成功。" }));
+
+      handleSuccessfulLogin(ws, row, kickTimer, token);
+      return;
+    } else {
+      console.log(ws.payload);
+      console.log(username);
     }
 
     bcrypt.compare(password, row.password, (err, result) => {
@@ -110,7 +133,7 @@ export function handleFailedLogin(ws) {
 }
 
 // 处理成功登录
-export function handleSuccessfulLogin(ws, row, kickTimer) {
+export function handleSuccessfulLogin(ws, row, kickTimer, token) {
   ws.isAuthenticated = true;
   ws.username = row.username;
   ws.permission = row.permission;
@@ -124,4 +147,10 @@ export function handleSuccessfulLogin(ws, row, kickTimer) {
 
   clearTimeout(kickTimer);
   ws.send(JSON.stringify({ type: "sys", data: " 登录成功，可以开始聊天了" }));
+  if (!token) {
+    console.log("已发送token");
+    ws.send(
+      JSON.stringify({ type: "token", data: generateToken(ws.username) })
+    );
+  }
 }
