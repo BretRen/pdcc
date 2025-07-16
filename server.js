@@ -177,6 +177,12 @@ function setupServer() {
       command.handleKickCommand(ws, args, wss);
     } else if (fallbackCmd === "/ban") {
       command.handleBanCommand(ws, args, wss, db);
+    } else if (fallbackCmd === "/reload") {
+      command.reload(ws, wss, setupServer);
+    } else if (fallbackCmd === "/unban") {
+      command.unban(ws, args, wss, db);
+    } else if (fallbackCmd === "/banlist") {
+      command.banlist(ws, args, wss, db);
     }
   }
 

@@ -1,5 +1,7 @@
 {
     "/kick": 4,
     "/ban": 4,
-    "/unban": 4
+    "/unban": 4,
+    "/reload": 4,
+    "/banlist": 3
 }

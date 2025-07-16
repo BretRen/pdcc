@@ -17,3 +17,6 @@
   - 实现 /ban
   - 实现 /unban
   - 修改日志修改
+  - 分文件
+  - 添加/reload
+  - 添加/banlist
