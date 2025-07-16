@@ -117,13 +117,16 @@ function setupServer() {
 
   // 广播消息
   function broadcastMessage(wss, sender, message) {
+    console.log(sender.username);
     for (const client of wss.clients) {
       if (
         client !== sender &&
         client.readyState === WebSocket.OPEN &&
         client.isAuthenticated
       ) {
-        client.send(JSON.stringify({ type: "msg", data: message }));
+        client.send(
+          JSON.stringify({ type: "msg", data: message, from: sender.username })
+        );
       }
     }
   }

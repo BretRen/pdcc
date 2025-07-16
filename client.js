@@ -15,6 +15,9 @@ function restart() {
 }
 
 let ws;
+let username;
+let welcome = false;
+
 const url = "ws://localhost:8080";
 const v = "1.0.8";
 
@@ -43,10 +46,12 @@ function connect() {
 
     if (msg.type === "sys") {
       console.log(`\n系统消息: ${msg.data}`);
-    } else if (msg.type === "echo") {
-      console.log(`\n回显: ${msg.data}`);
+    } else if (msg.type === "data") {
+      username = msg.data.username;
+      console.log(chalk.green(`欢迎回来${username}!`));
+      welcome = true;
     } else if (msg.type === "msg") {
-      console.log(`\n聊天消息: ${msg.data}`);
+      console.log(`\n[${msg.from}]: ${msg.data}`);
     } else if (msg.type === "v") {
       ws.send(JSON.stringify({ type: "v", data: v }));
     } else if (msg.type === "error") {
@@ -76,7 +81,10 @@ function connect() {
 }
 
 function prompt() {
-  process.stdout.write("");
+  if (username && welcome) {
+    process.stdout.write(`[${username}]: `);
+  }
+  process.stdout.write(``);
 }
 
 function handleCommand(cmdLine) {
@@ -109,7 +117,9 @@ function handleCommand(cmdLine) {
         if (cmdLine.startsWith("/")) {
           ws.send(JSON.stringify({ type: "command", data: cmdLine }));
         } else {
-          ws.send(JSON.stringify({ type: "msg", data: cmdLine }));
+          ws.send(
+            JSON.stringify({ type: "msg", from: username, data: cmdLine })
+          );
         }
       } else {
         process.stdout.write("\x1b[F\x1b[2K");

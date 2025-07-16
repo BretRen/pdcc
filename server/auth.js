@@ -147,6 +147,8 @@ export function handleSuccessfulLogin(ws, row, kickTimer, token) {
 
   clearTimeout(kickTimer);
   ws.send(JSON.stringify({ type: "sys", data: " 登录成功，可以开始聊天了" }));
+  ws.send(JSON.stringify({ type: "data", data: { username: ws.username } }));
+
   if (!token) {
     console.log("已发送token");
     ws.send(
