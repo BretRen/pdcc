@@ -1,10 +1,10 @@
-const WebSocket = require("ws");
-const { spawn } = require("child_process");
-const path = require("path");
-
+import WebSocket from "ws";
+import { spawn } from "child_process";
+import path from "path";
+import chalk from "chalk";
 function restart() {
   const scriptPath = path.resolve(process.argv[1]);
-  console.log("♻️ 正在重启:", scriptPath);
+  console.log(chalk.green("[Restart] 正在重启:", scriptPath));
   spawn("cmd", ["/c", "start", "node", scriptPath], {
     detached: true,
     cwd: process.cwd(),
@@ -21,7 +21,7 @@ function connect() {
   ws = new WebSocket(url);
 
   ws.on("open", () => {
-    console.log("✅ 已连接服务器，输入你要说的话：");
+    console.log(chalk.green("已连接服务器"));
     prompt();
   });
 
@@ -30,33 +30,33 @@ function connect() {
     try {
       msg = JSON.parse(rawData.toString());
     } catch {
-      console.log("⚠️ 收到非 JSON 消息：", rawData.toString());
+      console.log(chalk.yellow("收到非 JSON 消息：", rawData.toString()));
       return;
     }
 
     if (msg.type === "sys") {
-      console.log(`\n📢 系统消息: ${msg.data}`);
+      console.log(`\n系统消息: ${msg.data}`);
     } else if (msg.type === "echo") {
-      console.log(`\n📨 回显: ${msg.data}`);
+      console.log(`\n回显: ${msg.data}`);
     } else if (msg.type === "msg") {
-      console.log(`\n💬 聊天消息: ${msg.data}`);
+      console.log(`\n聊天消息: ${msg.data}`);
     } else if (msg.type === "v") {
       ws.send(JSON.stringify({ type: "v", data: v }));
     } else if (msg.type === "error") {
-      console.log(`\n\x1b[31m[ERROR] ${msg.data}\x1b[0m`);
+      console.log(chalk.red(`\n ${msg.data}`));
     } else {
-      console.log(`\n🔖 [${msg.type}] ${msg.data}`);
+      console.log(`\n[${msg.type}] ${msg.data}`);
     }
 
     prompt();
   });
 
   ws.on("close", () => {
-    console.log("\n❌ 与服务器断开连接");
+    console.log(chalk.red("\n与服务器断开连接"));
   });
 
   ws.on("error", (err) => {
-    console.log("\n❌ 连接错误:", err.message);
+    console.log(chalk.red("\n连接错误:", err.message));
   });
 }
 
@@ -70,7 +70,7 @@ function handleCommand(cmdLine) {
 
   switch (cmd) {
     case "/help":
-      console.log("🆘 可用命令: /help /quit /rejoin /restart");
+      console.log(" 可用命令: /help /quit /rejoin /restart");
       break;
 
     case "/quit":
@@ -79,7 +79,7 @@ function handleCommand(cmdLine) {
       break;
 
     case "/rejoin":
-      console.log("🔄 正在重新连接...");
+      console.log(chalk.yellow("正在重新连接..."));
       if (ws) ws.terminate();
       connect();
       break;
@@ -98,7 +98,7 @@ function handleCommand(cmdLine) {
         }
       } else {
         process.stdout.write("\x1b[F\x1b[2K");
-        console.log("⚠️ 未连接，消息未发送");
+        console.log(chalk.yellow("未连接，消息未发送"));
       }
       break;
   }
