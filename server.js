@@ -13,7 +13,8 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE,
   password TEXT,
-  permission INTEGER DEFAULT 1
+  permission INTEGER DEFAULT 1,
+  status TEXT DEFAULT 'activity'
 )`);
 // 应该为role，谢谢
 
@@ -91,7 +92,7 @@ wss.on("connection", (ws) => {
               return;
             }
             db.run(
-              "INSERT INTO users(username, password, permission) VALUES(?, ?, 1)",
+              "INSERT INTO users(username, password, permission, status) VALUES(?, ?, 1, 'activity')",
               [username, hash],
               function (err) {
                 if (err) {
@@ -103,6 +104,7 @@ wss.on("connection", (ws) => {
                       })
                     );
                   } else {
+                    console.log(err);
                     ws.send(
                       JSON.stringify({
                         type: "error",
@@ -163,6 +165,17 @@ wss.on("connection", (ws) => {
                   ws.isAuthenticated = true;
                   ws.username = row.username;
                   ws.permission = row.permission;
+                  ws.status = row.status;
+                  if (ws.status == "baned") {
+                    ws.send(
+                      JSON.stringify({
+                        type: "error",
+                        data: "你无权登录此账户",
+                      })
+                    );
+                    ws.terminate();
+                    return;
+                  }
                   clearTimeout(kickTimer);
                   ws.send(
                     JSON.stringify({
@@ -231,6 +244,8 @@ wss.on("connection", (ws) => {
     else if (data.type === "command") {
       const commandPermissions = {
         "/kick": 4,
+        "/ban": 4,
+        "/unban": 4,
       };
 
       const parts = data.data.trim().split(/\s+/);
@@ -268,6 +283,58 @@ wss.on("connection", (ws) => {
                   ? `✅ 已成功踢出用户 ${targetUsername}`
                   : `⚠️ 未找到在线用户 ${targetUsername}`,
               })
+            );
+          } else if (cmd === "/ban") {
+            if (args.length < 1) {
+              ws.send(
+                JSON.stringify({ type: "error", data: "用法: /ban <用户名>" })
+              );
+              return;
+            }
+            const targetUsername = args[0];
+
+            // 更新数据库中用户状态为 baned
+            db.run(
+              "UPDATE users SET status = ? WHERE username = ?",
+              ["baned", targetUsername],
+              function (err) {
+                if (err) {
+                  ws.send(
+                    JSON.stringify({
+                      type: "error",
+                      data: "❌ 封禁失败：" + err.message,
+                    })
+                  );
+                  return;
+                }
+
+                // 踢出目标用户
+                let kicked = false;
+                for (const client of wss.clients) {
+                  if (
+                    client.readyState === WebSocket.OPEN &&
+                    client.username === targetUsername
+                  ) {
+                    client.send(
+                      JSON.stringify({
+                        type: "error",
+                        data: "⛔ 你已被管理员封禁并踢出",
+                      })
+                    );
+                    client.close(4003, "封禁踢出");
+                    kicked = true;
+                  }
+                }
+
+                ws.send(
+                  JSON.stringify({
+                    type: "sys",
+                    data: `✅ 用户 ${targetUsername} 已封禁${
+                      kicked ? "并踢出" : "（但当前未在线）"
+                    }`,
+                  })
+                );
+              }
             );
           }
         } else {
