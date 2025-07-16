@@ -3,7 +3,7 @@ const { spawn } = require("child_process");
 const path = require("path");
 
 const url = "ws://localhost:8080";
-const v = "1.0.6";
+const v = "1.0.7";
 
 let ws;
 let isAuthenticated = false;

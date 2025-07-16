@@ -1,17 +1,18 @@
 const WebSocket = require("ws");
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
+const readline = require("readline");
 
 const wss = new WebSocket.Server({ port: 8080 });
-const v = "1.0.6";
-
+const v = "1.0.7";
 const db = new sqlite3.Database(path.resolve(__dirname, "pdcc.db"));
 
-// 初始化用户表
+// 初始化用户表（增加权限字段）
 db.run(`CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE,
-  password TEXT
+  password TEXT,
+  permission INTEGER DEFAULT 1
 )`);
 
 console.log("✅ WebSocket 服务器运行在 ws://localhost:8080");
@@ -19,8 +20,9 @@ console.log("✅ WebSocket 服务器运行在 ws://localhost:8080");
 wss.on("connection", (ws) => {
   console.log("🟢 客户端已连接");
 
-  ws.isAuthenticated = false; // 是否登录成功
-  ws.loginAttempts = 0; // 连续登录失败次数
+  ws.isAuthenticated = false;
+  ws.permission = 0;
+  ws.loginAttempts = 0;
 
   ws.send(JSON.stringify({ type: "v", data: v }));
   ws.send(
@@ -30,7 +32,6 @@ wss.on("connection", (ws) => {
     })
   );
 
-  // 30秒内未登录/注册踢出
   const kickTimer = setTimeout(() => {
     if (!ws.isAuthenticated) {
       ws.send(
@@ -54,9 +55,7 @@ wss.on("connection", (ws) => {
       return;
     }
 
-    // 只允许登录/注册命令，或者已登录的客户端可以发送其他消息
     if (!ws.isAuthenticated) {
-      // 仅允许 /login 和 /register 命令，且格式检查
       if (
         data.type === "command" &&
         (data.data.startsWith("/login ") || data.data.startsWith("/register "))
@@ -77,9 +76,8 @@ wss.on("connection", (ws) => {
         }
 
         if (cmd === "/register") {
-          // 注册逻辑
           db.run(
-            "INSERT INTO users(username, password) VALUES(?, ?)",
+            "INSERT INTO users(username, password, permission) VALUES(?, ?, 1)",
             [username, password],
             function (err) {
               if (err) {
@@ -109,7 +107,6 @@ wss.on("connection", (ws) => {
             }
           );
         } else if (cmd === "/login") {
-          // 登录逻辑
           db.get(
             "SELECT * FROM users WHERE username = ? AND password = ?",
             [username, password],
@@ -125,7 +122,9 @@ wss.on("connection", (ws) => {
               }
               if (row) {
                 ws.isAuthenticated = true;
-                clearTimeout(kickTimer); // 登录成功取消踢出计时
+                ws.username = row.username;
+                ws.permission = row.permission;
+                clearTimeout(kickTimer);
                 ws.send(
                   JSON.stringify({
                     type: "sys",
@@ -151,7 +150,6 @@ wss.on("connection", (ws) => {
           );
         }
       } else {
-        // 未登录不能执行其他命令和消息
         ws.send(
           JSON.stringify({
             type: "error",
@@ -159,12 +157,10 @@ wss.on("connection", (ws) => {
           })
         );
       }
-      return; // 未登录状态下一律返回
+      return;
     }
 
-    // 认证后才允许处理其他消息
     if (data.type === "msg") {
-      // 广播消息给其他客户端
       for (const client of wss.clients) {
         if (
           client !== ws &&
@@ -199,3 +195,64 @@ wss.on("connection", (ws) => {
     clearTimeout(kickTimer);
   });
 });
+
+//
+// 服务端控制台命令（权限等级为 -1，拥有所有权限）
+//
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+const serverPermission = -1;
+
+function handleServerCommand(cmdLine) {
+  const parts = cmdLine.trim().split(/\s+/);
+  const cmd = parts[0];
+  const args = parts.slice(1);
+
+  if (cmd === "/help") {
+    console.log("🆘 可用服务端命令: /help /quit /kick <用户名>");
+  } else if (cmd === "/quit") {
+    console.log("👋 服务器即将关闭...");
+    process.exit(0);
+  } else if (cmd === "/kick") {
+    if (serverPermission !== -1 && serverPermission < 4) {
+      console.log("⛔ 权限不足，无法执行 /kick");
+      return;
+    }
+
+    if (args.length < 1) {
+      console.log("用法: /kick <用户名>");
+      return;
+    }
+    const targetUsername = args[0];
+    let kicked = false;
+    for (const client of wss.clients) {
+      if (
+        client.readyState === WebSocket.OPEN &&
+        client.username === targetUsername
+      ) {
+        client.send(
+          JSON.stringify({
+            type: "error",
+            data: "⛔ 你已被管理员踢出",
+          })
+        );
+        client.close(4002, "被踢出");
+        console.log(`✅ 已踢出用户 ${targetUsername}`);
+        kicked = true;
+      }
+    }
+    if (!kicked) {
+      console.log(`⚠️ 没有找到用户名为 ${targetUsername} 的在线用户`);
+    }
+  } else {
+    console.log("❓ 未知命令，请输入 /help 查看可用命令");
+  }
+  rl.prompt();
+}
+
+rl.on("line", handleServerCommand);
+rl.setPrompt("> ");
+rl.prompt();
